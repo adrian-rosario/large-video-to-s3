@@ -1,0 +1,7 @@
+{
+  "region": "us-east-1",
+  "bucket": "your-globally-unique-test-bucket",
+  "keyPrefix": "uploads/",
+  "partSizeMiB": 8,
+  "maxConcurrentParts": 4
+}

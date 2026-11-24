@@ -1,0 +1,81 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Test resources for large-video-to-s3. Creates a private, encrypted S3 bucket for
+  multipart-upload testing (with a lifecycle rule that auto-aborts incomplete
+  multipart uploads so interrupted-transfer tests never accrue orphaned-part cost),
+  plus a least-privilege managed IAM policy you attach to your own user or role.
+
+  Deploy into YOUR OWN AWS account:
+
+    aws cloudformation deploy \
+      --template-file infra/test-bucket.yaml \
+      --stack-name lvs3-test \
+      --parameter-overrides BucketName=<your-globally-unique-name> \
+      --capabilities CAPABILITY_IAM
+
+Parameters:
+  BucketName:
+    Type: String
+    Description: Globally-unique name for the test bucket.
+    AllowedPattern: "^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$"
+
+  AbortIncompleteAfterDays:
+    Type: Number
+    Default: 1
+    MinValue: 1
+    Description: Days before incomplete multipart uploads are auto-aborted.
+
+Resources:
+  UploadTestBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref BucketName
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      LifecycleConfiguration:
+        Rules:
+          - Id: AbortIncompleteMultipartUploads
+            Status: Enabled
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: !Ref AbortIncompleteAfterDays
+
+  # Attach this to your own IAM user or role; it does not create long-lived keys.
+  UploaderPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: Least-privilege multipart-upload access to the test bucket.
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: BucketLevel
+            Effect: Allow
+            Action:
+              - s3:ListBucketMultipartUploads
+              - s3:GetBucketLocation
+            Resource: !GetAtt UploadTestBucket.Arn
+          - Sid: ObjectLevel
+            Effect: Allow
+            Action:
+              - s3:PutObject
+              - s3:GetObject
+              - s3:AbortMultipartUpload
+              - s3:ListMultipartUploadParts
+            Resource: !Sub "${UploadTestBucket.Arn}/*"
+
+Outputs:
+  BucketName:
+    Description: The test bucket name — put this in config.local.json.
+    Value: !Ref UploadTestBucket
+  Region:
+    Description: The region the bucket was created in.
+    Value: !Ref AWS::Region
+  ManagedPolicyArn:
+    Description: Attach this managed policy to your IAM user/role.
+    Value: !Ref UploaderPolicy

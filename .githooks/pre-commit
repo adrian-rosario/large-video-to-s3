@@ -1,0 +1,25 @@
+#!/bin/sh
+# Local guard — refuses to commit credential/local-config files or obvious AWS
+# keys. Enable once per clone:  git config core.hooksPath .githooks
+set -eu
+
+staged=$(git diff --cached --name-only)
+
+pattern='(^|/)(config\.local\.[^/]+|[^/]*\.env|credentials|aws-credentials.*|[^/]*\.pem|[^/]*\.p8|[^/]*\.local\.plist)$|(^|/)\.aws/'
+if printf '%s\n' "$staged" | grep -Eq "$pattern"; then
+    echo "✖ Commit blocked: a credential or local-config file is staged."
+    printf '%s\n' "$staged" | grep -E "$pattern"
+    echo "  Unstage it (git restore --staged <file>) — it should stay local only."
+    exit 1
+fi
+
+# Scan the staged diff for AWS access-key IDs or secret-key assignments.
+# Exclude this scanner's own pattern files so it doesn't match its own rules.
+if git diff --cached -U0 -- . ':!.githooks' ':!.github/workflows' \
+    | grep -Eq 'AKIA[0-9A-Z]{16}|aws_secret_access_key'; then
+    echo "✖ Commit blocked: the staged changes look like they contain an AWS credential."
+    echo "  Remove it before committing."
+    exit 1
+fi
+
+exit 0

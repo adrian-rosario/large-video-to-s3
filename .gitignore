@@ -1,0 +1,26 @@
+# Swift / SPM
+.build/
+.swiftpm/
+Package.resolved
+
+# Xcode
+DerivedData/
+*.xcuserstate
+xcuserdata/
+*.xcscmblueprint
+*.xccheckout
+
+# macOS
+.DS_Store
+
+# Secrets / credentials — NEVER commit
+.env
+.env.*
+*.env
+secrets/
+credentials
+aws-credentials*
+*.pem
+*.p8
+config.local*
+*.local.plist
