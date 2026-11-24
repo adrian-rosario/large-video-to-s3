@@ -35,4 +35,4 @@ SwiftUI app → drive-disconnect handling → survive-app-death → headless lau
 
 ## License
 
-TBD before the repository is made public.
+[MIT](LICENSE) © 2026 Adrian Rosario
