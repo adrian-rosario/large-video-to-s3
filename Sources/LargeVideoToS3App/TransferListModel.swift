@@ -11,6 +11,7 @@ struct TransferItem: Identifiable {
     var progress: Double  // 0...1
     var completed: Int = 0
     var total: Int = 0
+    var volumePath: String? = nil  // the mounted volume the source file lives on
 }
 
 /// Owns the transfer queue and drives the engine. All UI state lives on the
@@ -24,11 +25,33 @@ final class TransferListModel {
     private let s3: S3Client
     private let config: AppConfig
     private var tasks: [UUID: Task<Void, Never>] = [:]
+    private var volumeMonitor: VolumeMonitor?
 
     init(store: TransferStore, s3: S3Client, config: AppConfig) {
         self.store = store
         self.s3 = s3
         self.config = config
+        startVolumeMonitoring()
+    }
+
+    private func startVolumeMonitoring() {
+        volumeMonitor = VolumeMonitor { [weak self] event in
+            Task { @MainActor in self?.handleVolumeEvent(event) }
+        }
+        volumeMonitor?.start()
+    }
+
+    /// When the drive holding an active transfer's source file is pulled, pause
+    /// that transfer so it checkpoints cleanly and can resume when it returns.
+    private func handleVolumeEvent(_ event: VolumeMonitor.Event) {
+        guard case .disappeared(let volumePath) = event else { return }
+        for item in items where item.state == .uploading && item.volumePath == volumePath {
+            pause(item.id)
+        }
+    }
+
+    private func volumePath(for url: URL) -> String? {
+        (try? url.resourceValues(forKeys: [.volumeURLKey]))?.volume?.path
     }
 
     /// Load any jobs already persisted (so the queue survives relaunch).
@@ -40,7 +63,8 @@ final class TransferListModel {
             let state: TransferState = job.state == .uploading ? .paused : job.state
             return TransferItem(
                 id: job.id, name: job.fileURL.lastPathComponent, state: state,
-                progress: job.progress, completed: done, total: job.parts.count)
+                progress: job.progress, completed: done, total: job.parts.count,
+                volumePath: volumePath(for: job.fileURL))
         }
     }
 
@@ -52,7 +76,9 @@ final class TransferListModel {
                 key: config.keyPrefix + url.lastPathComponent,
                 totalSize: fileSize(url))
             items.insert(
-                TransferItem(id: job.id, name: url.lastPathComponent, state: .uploading, progress: 0),
+                TransferItem(
+                    id: job.id, name: url.lastPathComponent, state: .uploading, progress: 0,
+                    volumePath: volumePath(for: url)),
                 at: 0)
             Task { try? await store.upsert(job) }
             run(job)
