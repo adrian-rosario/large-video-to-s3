@@ -133,13 +133,17 @@ public actor Uploader {
                 let done = job.parts.filter { $0.state == .uploaded }.count
                 onProgress?(done, job.parts.count)
 
-                if let part = iterator.next() {
+                // Stop queuing new parts once cancelled (paused); let the
+                // already-in-flight parts finish and checkpoint.
+                if !Task.isCancelled, let part = iterator.next() {
                     group.addTask { try await uploadOne(part) }
                     inFlight += 1
                 }
             }
         }
 
+        // Surface the pause/cancel after in-flight parts have drained + saved.
+        try Task.checkCancellation()
         return job
     }
 

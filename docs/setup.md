@@ -55,7 +55,22 @@ It uploads in multipart chunks and checkpoints progress to `.lvs3-state.json` (g
 resume in action: start an upload of a large file, interrupt it with Ctrl-C partway, then run the
 same command again — it reports how many parts were already done and re-drives only the rest.
 
-## 6. Tear it down
+## 6. Run the app (SwiftUI)
+
+```sh
+AWS_PROFILE=personal swift run LargeVideoToS3App
+```
+
+A window opens with a transfer queue. Click **+** to add files; each uploads with a live progress
+bar and can be paused/resumed. The queue is persisted in Core Data (under
+`~/Library/Application Support/large-video-to-s3/`), so it survives relaunch and resumes. Run it from
+the repo root so it finds `config.local.json`.
+
+> This runs as a plain SwiftUI executable for development. Shipping it to the App Store would mean
+> wrapping the same `TransferKit`/`TransferKitAWS` code in an Xcode app target (with a bundle,
+> entitlements, and sandbox) — the engine is unchanged.
+
+## 7. Tear it down
 
 ```sh
 # empty the bucket first (CloudFormation won't delete a non-empty bucket)

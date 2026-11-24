@@ -8,6 +8,7 @@ let package = Package(
         .library(name: "TransferKit", targets: ["TransferKit"]),
         .library(name: "TransferKitAWS", targets: ["TransferKitAWS"]),
         .executable(name: "lvs3", targets: ["lvs3"]),
+        .executable(name: "LargeVideoToS3App", targets: ["LargeVideoToS3App"]),
     ],
     dependencies: [
         .package(url: "https://github.com/awslabs/aws-sdk-swift", from: "1.0.0")
@@ -28,6 +29,12 @@ let package = Package(
         // Command-line driver for real uploads against a test bucket.
         .executableTarget(
             name: "lvs3",
+            dependencies: ["TransferKit", "TransferKitAWS"]
+        ),
+
+        // SwiftUI macOS app (run with `swift run LargeVideoToS3App`).
+        .executableTarget(
+            name: "LargeVideoToS3App",
             dependencies: ["TransferKit", "TransferKitAWS"]
         ),
 
