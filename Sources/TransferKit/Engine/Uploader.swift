@@ -15,12 +15,18 @@ public actor Uploader {
     }
 
     /// Start or resume `job`, reading part bytes from `source`.
-    public func run(_ job: TransferJob, source: PartDataSource) async throws {
+    /// `onProgress` is called after each confirmed part with (completed, total).
+    public func run(
+        _ job: TransferJob,
+        source: PartDataSource,
+        onProgress: (@Sendable (Int, Int) -> Void)? = nil
+    ) async throws {
         var job = try await prepared(job)
         guard let uploadID = job.uploadID else { throw UploaderError.notStarted }
 
         let pending = job.parts.filter { $0.state != .uploaded }
-        job = try await uploadPending(pending, in: job, uploadID: uploadID, source: source)
+        job = try await uploadPending(
+            pending, in: job, uploadID: uploadID, source: source, onProgress: onProgress)
 
         guard job.parts.allSatisfy({ $0.state == .uploaded && $0.eTag != nil }) else {
             throw UploaderError.incompleteUpload
@@ -60,7 +66,8 @@ public actor Uploader {
             }
         } else if let uploadID = job.uploadID {
             let existing = try await s3.listParts(bucket: job.bucket, key: job.key, uploadID: uploadID)
-            let eTagByNumber = Dictionary(existing.map { ($0.number, $0.eTag) }, uniquingKeysWith: { a, _ in a })
+            let eTagByNumber = Dictionary(
+                existing.map { ($0.number, $0.eTag) }, uniquingKeysWith: { a, _ in a })
             job.parts = job.parts.map { part in
                 var part = part
                 if let eTag = eTagByNumber[part.number] {
@@ -81,7 +88,8 @@ public actor Uploader {
         _ pending: [TransferPart],
         in job: TransferJob,
         uploadID: String,
-        source: PartDataSource
+        source: PartDataSource,
+        onProgress: (@Sendable (Int, Int) -> Void)?
     ) async throws -> TransferJob {
         guard !pending.isEmpty else { return job }
 
@@ -122,6 +130,8 @@ public actor Uploader {
                     job.parts[index].eTag = result.eTag
                 }
                 try await save(&job)  // checkpoint
+                let done = job.parts.filter { $0.state == .uploaded }.count
+                onProgress?(done, job.parts.count)
 
                 if let part = iterator.next() {
                     group.addTask { try await uploadOne(part) }
@@ -146,6 +156,6 @@ public actor Uploader {
 }
 
 public enum UploaderError: Error, Sendable {
-    case notStarted        // no upload id after prepare (shouldn't happen)
+    case notStarted  // no upload id after prepare (shouldn't happen)
     case incompleteUpload  // a part didn't finish; job left resumable
 }
