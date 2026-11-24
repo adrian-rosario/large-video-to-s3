@@ -41,6 +41,12 @@ public final class VolumeMonitor: @unchecked Sendable {
         session = nil
     }
 
+    deinit {
+        // Safety net: tear down the DA session so queued callbacks can't fire
+        // against a freed instance if the owner forgot to call stop().
+        stop()
+    }
+
     private static func deliver(
         _ disk: DADisk, _ context: UnsafeMutableRawPointer?, appeared: Bool
     ) {

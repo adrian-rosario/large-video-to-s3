@@ -83,14 +83,23 @@ public struct AWSS3Client: TransferKit.S3Client {
         }
     }
 
+    // Markers of non-retryable faults — auth, permissions, bad request/bucket.
+    // Retrying these just wastes attempts and hides the real cause.
+    private static let fatalMarkers = [
+        "AccessDenied", "InvalidAccessKeyId", "SignatureDoesNotMatch",
+        "NoSuchBucket", "InvalidBucketName", "AuthorizationHeaderMalformed",
+        "ExpiredToken", "TokenRefreshRequired", "AllAccessDisabled",
+    ]
+
     /// Best-effort mapping of SDK errors to the engine's retry model. Refine with
     /// the SDK's modeled error types as needed.
     private static func classify(_ error: Error) -> S3Error {
         let text = "\(error)"
         if text.contains("NoSuchUpload") { return .noSuchUpload }
-        // Treat the rest as transient so the engine's retry can ride out
-        // throttling / 5xx / network blips; a persistent fault still fails after
-        // maxRetries.
+        if fatalMarkers.contains(where: text.contains) { return .fatal(text) }
+        // Everything else is treated as transient so the engine's retry can ride
+        // out throttling / 5xx / network blips; a persistent fault still fails
+        // after maxRetries.
         return .transient(text)
     }
 }

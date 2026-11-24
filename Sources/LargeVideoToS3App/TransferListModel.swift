@@ -80,7 +80,8 @@ final class TransferListModel {
                     id: job.id, name: url.lastPathComponent, state: .uploading, progress: 0,
                     volumePath: volumePath(for: url)),
                 at: 0)
-            Task { try? await store.upsert(job) }
+            // The uploader persists the job (with its upload id + part plan) in
+            // prepared(); no need for a separate initial upsert that would race it.
             run(job)
         }
     }
@@ -109,7 +110,7 @@ final class TransferListModel {
         let uploader = Uploader(
             store: store, s3: s3,
             config: UploaderConfig(
-                partSize: Int64(config.partSizeMiB) * 1024 * 1024,
+                partSize: max(PartPlanner.minPartSize, Int64(config.partSizeMiB) * 1024 * 1024),
                 maxConcurrentParts: config.maxConcurrentParts))
         let source = FilePartSource(url: job.fileURL)
         let id = job.id

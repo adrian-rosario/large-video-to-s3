@@ -24,7 +24,7 @@ struct LVS3 {
             store: store,
             s3: s3,
             config: UploaderConfig(
-                partSize: Int64(config.partSizeMiB) * 1024 * 1024,
+                partSize: max(PartPlanner.minPartSize, Int64(config.partSizeMiB) * 1024 * 1024),
                 maxConcurrentParts: config.maxConcurrentParts))
 
         // Resume an unfinished job for this key, otherwise start a new one.
