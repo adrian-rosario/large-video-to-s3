@@ -6,12 +6,12 @@ import Foundation
 /// it is trivially `Sendable` and easy to snapshot, diff, and test.
 public struct TransferJob: Codable, Sendable, Identifiable, Equatable {
     public let id: UUID
-    public let fileURL: URL        // source file (resolved via a security-scoped bookmark later)
+    public let fileURL: URL  // source file (resolved via a security-scoped bookmark later)
     public let bucket: String
-    public let key: String         // destination object key
+    public let key: String  // destination object key
     public let totalSize: Int64
 
-    public var uploadID: String?   // S3 multipart UploadId, set after initiate
+    public var uploadID: String?  // S3 multipart UploadId, set after initiate
     public var state: TransferState
     public var parts: [TransferPart]
     public let createdAt: Date

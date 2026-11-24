@@ -17,7 +17,7 @@ public actor FakeS3Client: S3Client {
 
     private var uploads: [String: Upload] = [:]
     private var counter = 0
-    private var attempts: [Int: Int] = [:]   // uploadPart calls per part number
+    private var attempts: [Int: Int] = [:]  // uploadPart calls per part number
 
     public init(transientFailures: [Int: Int] = [:]) {
         self.transientFailuresRemaining = transientFailures

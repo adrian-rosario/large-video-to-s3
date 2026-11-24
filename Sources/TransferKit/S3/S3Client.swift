@@ -45,8 +45,8 @@ public protocol S3Client: Sendable {
 /// Errors surfaced by an `S3Client`.
 public enum S3Error: Error, Equatable, Sendable {
     case noSuchUpload
-    case transient(String)   // retryable (timeout, 5xx, throttle)
-    case fatal(String)       // not retryable (auth, bad request)
+    case transient(String)  // retryable (timeout, 5xx, throttle)
+    case fatal(String)  // not retryable (auth, bad request)
 
     /// Whether the engine should retry after this error.
     public var isRetryable: Bool {

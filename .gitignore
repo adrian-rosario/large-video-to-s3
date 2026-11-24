@@ -24,3 +24,4 @@ aws-credentials*
 *.p8
 config.local*
 *.local.plist
+.lvs3-state.json

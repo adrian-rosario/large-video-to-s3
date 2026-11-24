@@ -43,7 +43,19 @@ cp config.example.json config.local.json
 
 `config.local.json` is gitignored, so your bucket name never lands in the repo.
 
-## 5. Tear it down
+## 5. Run an upload (CLI)
+
+```sh
+swift run lvs3 /path/to/large-video.mov
+# or give it an explicit object key:
+swift run lvs3 /path/to/large-video.mov uploads/my-video.mov
+```
+
+It uploads in multipart chunks and checkpoints progress to `.lvs3-state.json` (gitignored). To see
+resume in action: start an upload of a large file, interrupt it with Ctrl-C partway, then run the
+same command again — it reports how many parts were already done and re-drives only the rest.
+
+## 6. Tear it down
 
 ```sh
 # empty the bucket first (CloudFormation won't delete a non-empty bucket)

@@ -6,11 +6,11 @@ import Foundation
 /// describe the byte range of the source file this part covers, so a resumed
 /// run can re-read exactly the right slice.
 public struct TransferPart: Codable, Sendable, Identifiable, Equatable {
-    public let number: Int       // 1-based S3 part number
-    public let offset: Int64     // byte offset of this part in the source file
-    public let size: Int64       // byte length of this part
+    public let number: Int  // 1-based S3 part number
+    public let offset: Int64  // byte offset of this part in the source file
+    public let size: Int64  // byte length of this part
     public var state: PartState
-    public var eTag: String?     // set once S3 confirms the part
+    public var eTag: String?  // set once S3 confirms the part
 
     public var id: Int { number }
 
